@@ -1,5 +1,5 @@
 """LSTM (Long Short-Term Memory) NN for tweet sentiment analysis."""
-
+import datetime, os
 import tensorflow as tf
 import numpy as np
 import pprint
@@ -29,6 +29,8 @@ class TextLSTM(object):
         self.current_lr = self.learning_lr
         self.class_cnt = config.class_cnt
         self.show = config.show
+        self.log_dir = '../log/'+datetime.datetime.now().strftime("%Y%m%d-%H%M%S")+'.csv'
+        self.checkpoint_dir = config.checkpoint_dir
 
         # self.input_x = tf.placeholder(tf.int32,
         #                               [None, sentindoc_cnt, wordinsent_cnt],
@@ -159,7 +161,6 @@ class TextLSTM(object):
             train_size = inputs.epoch
         batchList = np.random.randint(inputs.epoch, size = train_size)
         n = 0
-        # cost = 0
         loss_total = 0
         accuracy_total = 0
 
@@ -192,25 +193,79 @@ class TextLSTM(object):
         return loss_total/train_size, accuracy_total/train_size
 
     def test(self, inputs):
-        print("I'm a fake testing!")
-        # if self.show:
-        #     from utils import ProgressBar
-        #     bar = ProgressBar('test ', max=test_size)
+        if self.debug:
+            test_size = 10
+        else:
+            test_size = inputs.epoch
+        batchList = np.random.randint(inputs.epoch, size = test_size)
+        n = 0
+        loss_total = 0
+        accuracy_total = 0
 
-        # if self.show: bar.finish()
+        if self.show:
+            from utils import ProgressBar
+            bar = ProgressBar('test ', max=test_size)
+
+        for i in batchList:
+            nextBatchData = np.array(inputs.docs[i]).astype(np.int32).transpose()
+            # Make the labels one-hot
+            labels_temp = inputs.label[i]
+            nextBatchLabels = np.array(np.eye(self.class_cnt)[labels_temp], dtype=np.float64)
+            # nextBatchLabels = np.array(inputs.label[i], dtype=np.float64)
+            _loss, _accuracy, _prediction = self.sess.run(
+                [self.loss, self.accuracy, self.predictlabel],
+                feed_dict={
+                    self.input_x: nextBatchData,
+                    self.input_y: nextBatchLabels,
+                    self.dropout_keep_prob: 1.0
+                })
+            loss_total += _loss
+            accuracy_total += _accuracy
+            n += 1
+            if self.show: bar.next()
+        if self.show: bar.finish()
+        return loss_total/test_size, accuracy_total/test_size
     
     def run(self, train_data, test_data):
         print("-------> Training start. Total epoch: %s" % train_data.epoch)
         bestAccuracy = 0
         bestIteration = 0
 
+        record_file = open(self.log_dir,'w')
+        record_file.write('epoch,train_loss,train_accuracy,test_loss,test_accuracy,bestAccuracy,bestIterations\n')
+        record_file.close()
+
         for idx in range(self.iterations):
             print ('-> iterations: %s' % idx)
             train_loss, train_accuracy = self.train(train_data)
+            test_loss, test_accuracy = self.test(test_data)
+            # test_loss = 0.4
+            # test_accuracy = 0.6
             state = {
-                'train_loss': train_loss,
-                'train_accuracy': train_accuracy
+                '         epoch': idx,
+                '    train_loss': train_loss,
+                'train_accuracy': train_accuracy,
+                '     test_loss': test_loss,
+                ' test_accuracy': test_accuracy,
+                '  bestAccuracy': bestAccuracy,
+                ' bestIteration': bestIteration
             }
             pp.pprint(state)
             # self.test(test_data)
+            with open(self.log_dir, "a") as record_file:
+                record_file.write('%s,%s,%s,%s,%s,%s,%s\n' % (idx, train_loss, train_accuracy, test_loss, test_accuracy, bestAccuracy, bestIteration))
+
+            if test_accuracy > bestAccuracy and idx < 6:
+                bestAccuracy = test_accuracy
+
+            if test_accuracy > bestAccuracy and idx > 5:
+                bestAccuracy = test_accuracy
+                bestIteration = idx
+                self.saver.save(self.sess,
+                                os.path.join(self.checkpoint_dir, "Network.model"))
+                print('--> model saved: better accuracy!')
+                # if self.doc_emb_method != 'preload_no_update':
+                #     self.save_doc_emb(self.doc_emb)
+                #     self.save_doc_emb_test(self.doc_emb_test)
+                # self.save_pred_test(self.pred_test)
             

@@ -8,7 +8,7 @@ import math
 from functools import reduce
 
 class Dataset(object):
-    def __init__(self, data_path, voc, batch_size, word_emb_dim):
+    def __init__(self, data_path, voc, batch_size, word_emb_dim, prev_wordinsent_cnt = 0):
         self.voc = voc
 
         training_set = pandas.read_csv(data_path)
@@ -50,7 +50,10 @@ class Dataset(object):
             docs.append(thisDoc)
         # print(docs[0][0])
         print("-> wordinsent_cnt_train: ", wordinsent_cnt)
-        self.wordinsent_cnt = wordinsent_cnt
+        if prev_wordinsent_cnt > wordinsent_cnt:
+            self.wordinsent_cnt = prev_wordinsent_cnt
+        else:
+            self.wordinsent_cnt = wordinsent_cnt
 
         # WORDS TO NUMBERS
         # non_word_emb = np.zeros(word_emb_dim)

@@ -25,8 +25,9 @@ flags.DEFINE_integer("word_emb_dim", 50, "notice...")
 flags.DEFINE_integer("emb_dim", 50, "notice...")
 flags.DEFINE_string("train_data_path", "../train.csv", "notice...")
 flags.DEFINE_string("test_data_path", "../test.csv", "notice...")
+flags.DEFINE_string("checkpoint_dir", "../checkpoints", "checkpoint directory [checkpoints]")
 flags.DEFINE_integer("class_cnt", 2, "notice...")
-flags.DEFINE_boolean("debug", True, "[False]")
+flags.DEFINE_boolean("debug", False, "[False]")
 flags.DEFINE_boolean("show", True, "[True]")
 FLAGS = flags.FLAGS
 
@@ -105,7 +106,7 @@ def main(_):
     # LOAD DATA
     train_data = Dataset(FLAGS.train_data_path, voc, FLAGS.batch_size, FLAGS.word_emb_dim)
     # print(train_data.docs[0][0])
-    test_data = Dataset(FLAGS.test_data_path, voc, FLAGS.batch_size, FLAGS.word_emb_dim)
+    test_data = Dataset(FLAGS.test_data_path, voc, FLAGS.batch_size, FLAGS.word_emb_dim, prev_wordinsent_cnt = train_data.wordinsent_cnt)
     # print(test_data.docs[0][0])
     wordinsent_cnt = max(train_data.wordinsent_cnt, test_data.wordinsent_cnt)
 
