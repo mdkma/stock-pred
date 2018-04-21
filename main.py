@@ -5,22 +5,25 @@ import codecs
 import array
 import collections
 import io
-import pandas
 import numpy as np
-import re
-import string
 try:
-    # Python 2 compat
-    import cPickle as pickle
+    import cPickle as pickle # for Python 2
 except ImportError:
-    import pickle
+    import pickle # for Python 3
 import tensorflow as tf
-from hlstm import TextLSTM
+from dataset import *
+# from hlstm import TextLSTM
 
+pp = pprint.PrettyPrinter()
 flags = tf.app.flags
+flags.DEFINE_integer("batch_size", 32, "notice...")
 flags.DEFINE_boolean("reload_word_emb", False, "reload wordembedding from GloVe or use saved one [False]")
 flags.DEFINE_string("word_emb_path", "../glove.6B/glove.6B.50d.txt", "notice...")
-flags.DEFINE_string("data_path", "../data.csv", "notice...")
+flags.DEFINE_integer("word_emb_dim", 50, "notice...")
+flags.DEFINE_integer("emb_dim", 50, "notice...")
+flags.DEFINE_string("train_data_path", "../train.csv", "notice...")
+flags.DEFINE_string("test_data_path", "../test.csv", "notice...")
+flags.DEFINE_integer("class_cnt", 2, "notice...")
 FLAGS = flags.FLAGS
 
 def load_stanford(filename):
@@ -62,21 +65,33 @@ def load_stanford(filename):
         # print(inverse_dictionary[399999])
         return (word_vecs, dct, inverse_dictionary)
 
+# def get_word_emb(voc, word):
+#     try:
+#         return voc[word]
+#     except:
+#         return -1
+
 def main():
+    pp.pprint(flags.FLAGS.__flags)
     # LOAD WORD VECTORS and VOC
     if FLAGS.reload_word_emb == True:
-        wordVectors, voc, _ = load_stanford(FLAGS.word_emb_path)
+        wordVectors, voc, voc_inv = load_stanford(FLAGS.word_emb_path)
         f = open('../wordVectors.save', 'wb')
         pickle.dump(wordVectors, f)
         f.close()
         f = open('../voc.save', 'wb')
         pickle.dump(voc, f)
         f.close()
+        f = open('../voc_inv.save', 'wb')
+        pickle.dump(voc_inv, f)
+        f.close()
     else:
         f = open('../wordVectors.save', 'rb')
         wordVectors = pickle.load(f, encoding='latin1')
         f = open('../voc.save', 'rb')
         voc = pickle.load(f, encoding='latin1')
+        f = open('../voc_inv.save', 'rb')
+        voc_inv = pickle.load(f, encoding='latin1')
 
     print('-> wordVectors dim: ', np.shape(wordVectors))
     print('-> voc size: ', len(voc))
@@ -84,30 +99,22 @@ def main():
     # print(voc['brings'])
 
     # LOAD DATA
-    data = pandas.read_csv(FLAGS.data_path)
-    training_set = data[data['Date'] <= '2014-12-31']
-    testing_set = data[data['Date'] >= '2015-01-02']
+    train_data = Dataset(FLAGS.train_data_path, voc, FLAGS.batch_size, FLAGS.word_emb_dim)
+    print(train_data.docs[0][0])
+    test_data = Dataset(FLAGS.test_data_path, voc, FLAGS.batch_size, FLAGS.word_emb_dim)
+    print(test_data.docs[0][0])
 
-    training_date = training_set['Date']
-    training_label = training_set['Label']
-    training_news_group = training_set.iloc[:, 2:27]
-    testing_date = testing_set['Date']
-    testing_label = testing_set['Label']
-    testing_news_group = testing_set.iloc[:, 2:27]
+    tf.reset_default_graph()
+    # print ('.................................. training network')
+    # with tf.Session() as sess:
+    #     model = TextLSTM(25, 
+    #              wordinsent_cnt, 
+    #              FLAGS.class_cnt,
+    #              len(voc), 
+    #              FLAGS.emb_dim, 
+    #              FLAGS.emb_dim,
+    #              wordVectors)
 
-    remove = string.punctuation
-    remove = remove.replace("-", "") # don't remove hyphens
-    pattern = r"[{}]".format(remove) # create the pattern
-
-    # Preprocess the news by using regex
-    for title in training_news_group:
-        for index in range(len(training_news_group[title])):
-            news = re.sub(r"(^b)([\"\'])", "", str(training_news_group[title][index]))
-            news = re.sub(r"([\"\']$)", "", str(news))
-            news = re.sub(pattern, "", str(news)) 
-            training_news_group[title][index] = news
-
-    print(training_news_group.head(5))
 
 if __name__ == "__main__":
     main()

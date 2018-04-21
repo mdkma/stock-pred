@@ -16,7 +16,7 @@ class TextLSTM(object):
                  vocab_size, 
                  embedding_size, 
                  hidden_size,
-                 emb_file,
+                 embeddings,
                  layer_count=1, **kw):
         assert layer_count >= 1, "An LSTM cannot have less than one layer."
 
@@ -33,8 +33,8 @@ class TextLSTM(object):
                                                 name="dropout_keep_prob")
 
         # Layer 1: Word embeddings
-        embfild = open(emb_file, 'rb')
-        embeddings = pickle.load(embfild, encoding='bytes')
+        # embfild = open(emb_file, 'rb')
+        # embeddings = pickle.load(embfild, encoding='bytes')
         self.embeddings = tf.Variable(embeddings)
 #         self.embeddings = tf.Variable(
 #             tf.random_uniform([vocab_size, embedding_size], -0.1, 0.1),
@@ -130,4 +130,9 @@ class TextLSTM(object):
                                          tf.argmax(self.input_y, 1))
             self.accuracy = tf.reduce_mean(tf.cast(self.correct_pred, "float"),
                                            name="accuracy")
+
+        self.sess.run(tf.global_variables_initializer())
+        self.saver = tf.train.Saver()
+    
+    def run(self, train_data, test_data):
             
