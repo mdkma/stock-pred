@@ -5,6 +5,7 @@ import codecs
 import array
 import collections
 import io
+import numpy as np
 try:
     # Python 2 compat
     import cPickle as pickle
@@ -12,6 +13,12 @@ except ImportError:
     import pickle
 import tensorflow as tf
 from hlstm import TextLSTM
+
+flags = tf.app.flags
+flags.DEFINE_boolean("reload_word_emb", False, "reload wordembedding from GloVe or use saved one [False]")
+flags.DEFINE_boolean("word_emb_path", "../glove.6B/glove.6B.50d.txt", "notice...")
+flags.DEFINE_boolean("data_path", "../data.csv", "notice...")
+FLAGS = flags.FLAGS
 
 def load_stanford(filename):
     """
@@ -25,8 +32,11 @@ def load_stanford(filename):
     vectors = array.array('d')
 
     # Read in the data.
-    with codecs.open(filename, 'r', encoding='ISO-8859-1') as savefile:
-        for i, line in enumerate(savefile):
+    # with codecs.open(filename, 'r', encoding='ISO-8859-1') as savefile:
+        # for i, line in enumerate(savefile):
+    with open(filename, 'r') as savefile:
+        i = 0
+        for line in savefile:
             tokens = line.split(' ')
 
             word = tokens[0]
@@ -34,22 +44,40 @@ def load_stanford(filename):
 
             dct[word] = i
             vectors.extend(float(x) for x in entries)
+            i += 1
             # Infer word vectors dimensions.
 
         no_components = len(entries)
         no_vectors = len(dct)
-        print "Corpus stats: ", no_components, no_vectors
+        print("Corpus stats: ", no_components, no_vectors)
 
         # Make these into numpy arrays
         word_vecs = np.array(vectors).reshape(no_vectors, no_components)
-        print word_vecs.shape
-        print word_vecs[:5]
+        # print(word_vecs.shape)
+        # print(word_vecs[399999])
         inverse_dictionary = {v: k for k, v in dct.items()}
+        # print(inverse_dictionary[399999])
         return (word_vecs, dct, inverse_dictionary)
 
 def main():
-    filename = "../glove.6B/glove.6B.200d.txt"
-    load_stanford(filename)
+    if FLAGS.reload_word_emb == True:
+        wordVectors, voc, _ = load_stanford(FLAGS.word_emb_path)
+        f = open('../wordVectors.save', 'wb')
+        pickle.dump(wordVectors, f)
+        f.close()
+        f = open('../voc.save', 'wb')
+        pickle.dump(voc, f)
+        f.close()
+    else:
+        f = open('../wordVectors.save', 'rb')
+        wordVectors = pickle.load(f, encoding='latin1')
+        f = open('../voc.save', 'rb')
+        voc = pickle.load(f, encoding='latin1')
+
+    print('-> wordVectors dim: ', np.shape(wordVectors))
+    print('-> voc size: ', np.shape(voc))
+    # print(wordVectors[3998])
+    # print(voc['brings'])
 
 if __name__ == "__main__":
     main()

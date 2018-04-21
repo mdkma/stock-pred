@@ -1,6 +1,7 @@
 """LSTM (Long Short-Term Memory) NN for tweet sentiment analysis."""
 
 import tensorflow as tf
+import numpy as np
 from tensorflow.python.ops.nn import rnn_cell, dynamic_rnn
 try:
     # Python 2 compat
