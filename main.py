@@ -5,7 +5,10 @@ import codecs
 import array
 import collections
 import io
+import pandas
 import numpy as np
+import re
+import string
 try:
     # Python 2 compat
     import cPickle as pickle
@@ -16,8 +19,8 @@ from hlstm import TextLSTM
 
 flags = tf.app.flags
 flags.DEFINE_boolean("reload_word_emb", False, "reload wordembedding from GloVe or use saved one [False]")
-flags.DEFINE_boolean("word_emb_path", "../glove.6B/glove.6B.50d.txt", "notice...")
-flags.DEFINE_boolean("data_path", "../data.csv", "notice...")
+flags.DEFINE_string("word_emb_path", "../glove.6B/glove.6B.50d.txt", "notice...")
+flags.DEFINE_string("data_path", "../data.csv", "notice...")
 FLAGS = flags.FLAGS
 
 def load_stanford(filename):
@@ -60,6 +63,7 @@ def load_stanford(filename):
         return (word_vecs, dct, inverse_dictionary)
 
 def main():
+    # LOAD WORD VECTORS and VOC
     if FLAGS.reload_word_emb == True:
         wordVectors, voc, _ = load_stanford(FLAGS.word_emb_path)
         f = open('../wordVectors.save', 'wb')
@@ -75,9 +79,35 @@ def main():
         voc = pickle.load(f, encoding='latin1')
 
     print('-> wordVectors dim: ', np.shape(wordVectors))
-    print('-> voc size: ', np.shape(voc))
+    print('-> voc size: ', len(voc))
     # print(wordVectors[3998])
     # print(voc['brings'])
+
+    # LOAD DATA
+    data = pandas.read_csv(FLAGS.data_path)
+    training_set = data[data['Date'] <= '2014-12-31']
+    testing_set = data[data['Date'] >= '2015-01-02']
+
+    training_date = training_set['Date']
+    training_label = training_set['Label']
+    training_news_group = training_set.iloc[:, 2:27]
+    testing_date = testing_set['Date']
+    testing_label = testing_set['Label']
+    testing_news_group = testing_set.iloc[:, 2:27]
+
+    remove = string.punctuation
+    remove = remove.replace("-", "") # don't remove hyphens
+    pattern = r"[{}]".format(remove) # create the pattern
+
+    # Preprocess the news by using regex
+    for title in training_news_group:
+        for index in range(len(training_news_group[title])):
+            news = re.sub(r"(^b)([\"\'])", "", str(training_news_group[title][index]))
+            news = re.sub(r"([\"\']$)", "", str(news))
+            news = re.sub(pattern, "", str(news)) 
+            training_news_group[title][index] = news
+
+    print(training_news_group.head(5))
 
 if __name__ == "__main__":
     main()
