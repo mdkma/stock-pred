@@ -1,5 +1,5 @@
 import os, time
-os.environ["CUDA_VISIBLE_DEVICES"]="-1" 
+# os.environ["CUDA_VISIBLE_DEVICES"]="-1" 
 import pprint
 import codecs
 import array
@@ -16,9 +16,9 @@ from hlstm import TextLSTM
 
 pp = pprint.PrettyPrinter()
 flags = tf.app.flags
-flags.DEFINE_integer("batch_size", 32, "notice...")
+flags.DEFINE_integer("batch_size", 16, "notice...")
 flags.DEFINE_integer("iterations", 100, "notice...")
-flags.DEFINE_float("learning_lr", 0.01, "notice...")
+flags.DEFINE_float("learning_lr", 0.001, "notice...")
 flags.DEFINE_boolean("reload_word_emb", False, "reload wordembedding from GloVe or use saved one [False]")
 flags.DEFINE_string("word_emb_path", "../glove.6B/glove.6B.50d.txt", "notice...")
 flags.DEFINE_integer("word_emb_dim", 50, "notice...")
