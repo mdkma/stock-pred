@@ -17,6 +17,8 @@ from hlstm import TextLSTM
 pp = pprint.PrettyPrinter()
 flags = tf.app.flags
 flags.DEFINE_integer("batch_size", 32, "notice...")
+flags.DEFINE_integer("iterations", 100, "notice...")
+flags.DEFINE_float("learning_lr", 0.01, "notice...")
 flags.DEFINE_boolean("reload_word_emb", False, "reload wordembedding from GloVe or use saved one [False]")
 flags.DEFINE_string("word_emb_path", "../glove.6B/glove.6B.50d.txt", "notice...")
 flags.DEFINE_integer("word_emb_dim", 50, "notice...")
@@ -24,6 +26,8 @@ flags.DEFINE_integer("emb_dim", 50, "notice...")
 flags.DEFINE_string("train_data_path", "../train.csv", "notice...")
 flags.DEFINE_string("test_data_path", "../test.csv", "notice...")
 flags.DEFINE_integer("class_cnt", 2, "notice...")
+flags.DEFINE_boolean("debug", True, "[False]")
+flags.DEFINE_boolean("show", True, "[True]")
 FLAGS = flags.FLAGS
 
 def load_stanford(filename):
@@ -71,7 +75,7 @@ def load_stanford(filename):
 #     except:
 #         return -1
 
-def main():
+def main(_):
     pp.pprint(flags.FLAGS.__flags)
     # LOAD WORD VECTORS and VOC
     if FLAGS.reload_word_emb == True:
@@ -106,11 +110,12 @@ def main():
     wordinsent_cnt = max(train_data.wordinsent_cnt, test_data.wordinsent_cnt)
 
     tf.reset_default_graph()
-    print ('.................................. training network')
+    # print ('.................................. training network')
     with tf.Session() as sess:
-        model = TextLSTM(sess, 25, wordinsent_cnt, FLAGS.class_cnt, len(voc), FLAGS.emb_dim, FLAGS.emb_dim, wordVectors)
+        model = TextLSTM(FLAGS, sess, 25, wordinsent_cnt, FLAGS.class_cnt, len(voc), FLAGS.emb_dim, FLAGS.emb_dim, wordVectors)
         model.run(train_data, test_data)
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    tf.app.run()

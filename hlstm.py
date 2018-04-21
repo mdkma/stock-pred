@@ -2,6 +2,7 @@
 
 import tensorflow as tf
 import numpy as np
+import pprint
 from tensorflow.python.ops.nn import rnn_cell, dynamic_rnn
 try:
     # Python 2 compat
@@ -9,8 +10,10 @@ try:
 except ImportError:
     import pickle
 
+pp = pprint.PrettyPrinter()
+
 class TextLSTM(object):
-    def __init__(self, sess, sentindoc_cnt, 
+    def __init__(self, config, sess, sentindoc_cnt, 
                  wordinsent_cnt, 
                  class_cnt,
                  vocab_size, 
@@ -20,16 +23,28 @@ class TextLSTM(object):
                  layer_count=1, **kw):
         assert layer_count >= 1, "An LSTM cannot have less than one layer."
         self.sess = sess
+        self.iterations = config.iterations
+        self.debug = config.debug
+        self.learning_lr = config.learning_lr
+        self.current_lr = self.learning_lr
+        self.class_cnt = config.class_cnt
+        self.show = config.show
 
+        # self.input_x = tf.placeholder(tf.int32,
+        #                               [None, sentindoc_cnt, wordinsent_cnt],
+        #                               name="input_x")
+        # self.input_y = tf.placeholder(tf.float32,
+        #                               [None, class_cnt],
+        #                               name="input_y")
         self.input_x = tf.placeholder(tf.int32,
-                                      [None, sentindoc_cnt, wordinsent_cnt],
+                                      [None, None],
                                       name="input_x")
         self.input_y = tf.placeholder(tf.float32,
                                       [None, class_cnt],
                                       name="input_y")
-        self.input_reg = tf.placeholder(tf.float32,
-                                      [None, sentindoc_cnt, wordinsent_cnt, embedding_size],
-                                      name="input_reg")
+        # self.input_reg = tf.placeholder(tf.float32,
+                                    #   [None, sentindoc_cnt, wordinsent_cnt, embedding_size],
+                                    #   name="input_reg")
         self.dropout_keep_prob = tf.placeholder(tf.float64,
                                                 name="dropout_keep_prob")
 
@@ -133,10 +148,69 @@ class TextLSTM(object):
                                          tf.argmax(self.input_y, 1))
             self.accuracy = tf.reduce_mean(tf.cast(self.correct_pred, "float"),
                                            name="accuracy")
-
+        self.optim = tf.train.AdamOptimizer(self.current_lr).minimize(self.loss)
         self.sess.run(tf.global_variables_initializer())
         self.saver = tf.train.Saver()
+
+    def train(self, inputs):
+        if self.debug:
+            train_size = 10
+        else:
+            train_size = inputs.epoch
+        batchList = np.random.randint(inputs.epoch, size = train_size)
+        n = 0
+        # cost = 0
+        loss_total = 0
+        accuracy_total = 0
+
+        if self.show:
+            from utils import ProgressBar
+            bar = ProgressBar('train', max=train_size)
+
+        for i in batchList:
+            # print(len(inputs.docs[i]))
+            # print(type(inputs.docs[i]))
+            nextBatchData = np.array(inputs.docs[i]).astype(np.int32).transpose()
+            # Make the labels one-hot
+            labels_temp = inputs.label[i]
+            nextBatchLabels = np.array(np.eye(self.class_cnt)[labels_temp], dtype=np.float64)
+            # nextBatchLabels = np.array(inputs.label[i], dtype=np.float64)
+            # print(np.shape(nextBatchData))
+            # print(len(nextBatchLabels))
+            _, _loss, _accuracy, _prediction = self.sess.run(
+                [self.optim, self.loss, self.accuracy, self.predictlabel],
+                feed_dict={
+                    self.input_x: nextBatchData,
+                    self.input_y: nextBatchLabels,
+                    self.dropout_keep_prob: 1.0
+                })
+            loss_total += _loss
+            accuracy_total += _accuracy
+            n += 1
+            if self.show: bar.next()
+        if self.show: bar.finish()
+        return loss_total/train_size, accuracy_total/train_size
+
+    def test(self, inputs):
+        print("I'm a fake testing!")
+        # if self.show:
+        #     from utils import ProgressBar
+        #     bar = ProgressBar('test ', max=test_size)
+
+        # if self.show: bar.finish()
     
     def run(self, train_data, test_data):
-        print("reach here!")
+        print("-------> Training start. Total epoch: %s" % train_data.epoch)
+        bestAccuracy = 0
+        bestIteration = 0
+
+        for idx in range(self.iterations):
+            print ('-> iterations: %s' % idx)
+            train_loss, train_accuracy = self.train(train_data)
+            state = {
+                'train_loss': train_loss,
+                'train_accuracy': train_accuracy
+            }
+            pp.pprint(state)
+            # self.test(test_data)
             
