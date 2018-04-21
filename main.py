@@ -12,7 +12,7 @@ except ImportError:
     import pickle # for Python 3
 import tensorflow as tf
 from dataset import *
-# from hlstm import TextLSTM
+from hlstm import TextLSTM
 
 pp = pprint.PrettyPrinter()
 flags = tf.app.flags
@@ -100,20 +100,16 @@ def main():
 
     # LOAD DATA
     train_data = Dataset(FLAGS.train_data_path, voc, FLAGS.batch_size, FLAGS.word_emb_dim)
-    print(train_data.docs[0][0])
+    # print(train_data.docs[0][0])
     test_data = Dataset(FLAGS.test_data_path, voc, FLAGS.batch_size, FLAGS.word_emb_dim)
-    print(test_data.docs[0][0])
+    # print(test_data.docs[0][0])
+    wordinsent_cnt = max(train_data.wordinsent_cnt, test_data.wordinsent_cnt)
 
     tf.reset_default_graph()
-    # print ('.................................. training network')
-    # with tf.Session() as sess:
-    #     model = TextLSTM(25, 
-    #              wordinsent_cnt, 
-    #              FLAGS.class_cnt,
-    #              len(voc), 
-    #              FLAGS.emb_dim, 
-    #              FLAGS.emb_dim,
-    #              wordVectors)
+    print ('.................................. training network')
+    with tf.Session() as sess:
+        model = TextLSTM(sess, 25, wordinsent_cnt, FLAGS.class_cnt, len(voc), FLAGS.emb_dim, FLAGS.emb_dim, wordVectors)
+        model.run(train_data, test_data)
 
 
 if __name__ == "__main__":

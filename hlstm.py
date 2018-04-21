@@ -10,7 +10,7 @@ except ImportError:
     import pickle
 
 class TextLSTM(object):
-    def __init__(self, sentindoc_cnt, 
+    def __init__(self, sess, sentindoc_cnt, 
                  wordinsent_cnt, 
                  class_cnt,
                  vocab_size, 
@@ -19,6 +19,7 @@ class TextLSTM(object):
                  embeddings,
                  layer_count=1, **kw):
         assert layer_count >= 1, "An LSTM cannot have less than one layer."
+        self.sess = sess
 
         self.input_x = tf.placeholder(tf.int32,
                                       [None, sentindoc_cnt, wordinsent_cnt],
@@ -29,7 +30,7 @@ class TextLSTM(object):
         self.input_reg = tf.placeholder(tf.float32,
                                       [None, sentindoc_cnt, wordinsent_cnt, embedding_size],
                                       name="input_reg")
-        self.dropout_keep_prob = tf.placeholder(tf.float32,
+        self.dropout_keep_prob = tf.placeholder(tf.float64,
                                                 name="dropout_keep_prob")
 
         # Layer 1: Word embeddings
@@ -83,7 +84,7 @@ class TextLSTM(object):
 
             outputs1, _states1 = dynamic_rnn(lstm_cells_dropout,
                                    inputs=embedded_words,
-                                   dtype=tf.float32)
+                                   dtype=tf.float64)
         
 #         outputs_reg = tf.add(outputs1, embedded_reg, 'output_with_reg')
         
@@ -104,7 +105,7 @@ class TextLSTM(object):
 
             outputs2, _states2 = dynamic_rnn(lstm_cells2_dropout,
                                    inputs=output_restore,
-                                   dtype=tf.float32)
+                                   dtype=tf.float64)
         
         outputs = tf.reduce_mean(outputs2, axis=1)
 
@@ -114,6 +115,8 @@ class TextLSTM(object):
 
         with tf.name_scope("output"):
             lstm_final_output = outputs
+            out_weight = tf.cast(out_weight, tf.float64)
+            out_bias = tf.cast(out_bias, tf.float64)
             self.scores = tf.nn.xw_plus_b(lstm_final_output, out_weight,
                                           out_bias, name="scores")
             self.predictions = tf.nn.softmax(self.scores, name="predictions")
@@ -135,4 +138,5 @@ class TextLSTM(object):
         self.saver = tf.train.Saver()
     
     def run(self, train_data, test_data):
+        print("reach here!")
             
