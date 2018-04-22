@@ -155,10 +155,10 @@ class TextLSTM(object):
         self.saver = tf.train.Saver()
 
     def train(self, inputs):
-        if self.debug:
-            train_size = 10
-        else:
-            train_size = inputs.epoch
+        # if self.debug:
+        train_size = 20
+        # else:
+        #     train_size = inputs.epoch
         batchList = np.random.randint(inputs.epoch, size = train_size)
         n = 0
         loss_total = 0
@@ -194,7 +194,7 @@ class TextLSTM(object):
 
     def test(self, inputs):
         if self.debug:
-            test_size = 10
+            test_size = 20
         else:
             test_size = inputs.epoch
         batchList = np.random.randint(inputs.epoch, size = test_size)
