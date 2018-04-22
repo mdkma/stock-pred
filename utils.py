@@ -1,3 +1,7 @@
+'''
+Utilization, small tools
+'''
+
 from progress.bar import Bar
 
 class ProgressBar(Bar):

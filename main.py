@@ -1,3 +1,7 @@
+'''
+main program to control the flow. data I/O
+'''
+
 import os, time
 # os.environ["CUDA_VISIBLE_DEVICES"]="-1" 
 import pprint
@@ -25,8 +29,8 @@ flags.DEFINE_boolean("reload_word_emb", False, "reload wordembedding from GloVe 
 flags.DEFINE_string("word_emb_path", "../glove.6B/glove.6B.50d.txt", "GloVe source file location")
 flags.DEFINE_integer("word_emb_dim", 50, "word embedding vectors dimension [50]")
 flags.DEFINE_integer("emb_dim", 50, "embedding dimension for LSTM layers [50]")
-flags.DEFINE_string("train_data_path", "../train.csv", "training data set path [../train.csv]")
-flags.DEFINE_string("test_data_path", "../test.csv", "testing data set path [../test.csv]")
+flags.DEFINE_string("train_data_path", "data/train.csv", "training data set path [data/train.csv]")
+flags.DEFINE_string("test_data_path", "data/test.csv", "testing data set path [data/test.csv]")
 flags.DEFINE_string("checkpoint_dir", "../checkpoints", "checkpoint directory [../checkpoints]")
 flags.DEFINE_integer("class_cnt", 2, "number of classes in the dataset [2]")
 flags.DEFINE_boolean("debug", False, "debug mode [False]")

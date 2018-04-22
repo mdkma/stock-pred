@@ -1,4 +1,6 @@
-"""LSTM (Long Short-Term Memory) NN for tweet sentiment analysis."""
+"""
+HLSTM model class
+"""
 import datetime, os
 import tensorflow as tf
 import numpy as np
