@@ -32,52 +32,23 @@ class TextLSTM(object):
         self.log_dir = '../log/'+datetime.datetime.now().strftime("%Y%m%d-%H%M%S")+'.csv'
         self.checkpoint_dir = config.checkpoint_dir
 
-        # self.input_x = tf.placeholder(tf.int32,
-        #                               [None, sentindoc_cnt, wordinsent_cnt],
-        #                               name="input_x")
-        # self.input_y = tf.placeholder(tf.float32,
-        #                               [None, class_cnt],
-        #                               name="input_y")
         self.input_x = tf.placeholder(tf.int32,
                                       [None, None],
                                       name="input_x")
         self.input_y = tf.placeholder(tf.float32,
                                       [None, class_cnt],
                                       name="input_y")
-        # self.input_reg = tf.placeholder(tf.float32,
-                                    #   [None, sentindoc_cnt, wordinsent_cnt, embedding_size],
-                                    #   name="input_reg")
         self.dropout_keep_prob = tf.placeholder(tf.float64,
                                                 name="dropout_keep_prob")
 
         # Layer 1: Word embeddings
-        # embfild = open(emb_file, 'rb')
-        # embeddings = pickle.load(embfild, encoding='bytes')
         self.embeddings = tf.Variable(embeddings)
-#         self.embeddings = tf.Variable(
-#             tf.random_uniform([vocab_size, embedding_size], -0.1, 0.1),
-#             name="embeddings")
         embedded_words = tf.nn.embedding_lookup(self.embeddings, self.input_x)
-
-        # Funnel the words into the LSTM.
-        # Current size: (batch_size, n_words, emb_dim)
-        # Want:         [(batch_size, n_hidden) * n_words]
-        #
-        # Since otherwise there's no way to feed information into the LSTM cell.
-        # Yes, it's a bit confusing, because we want a batch of multiple
-        # sequences, with each step being of 'embedding_size'.
-#         embedded_words = tf.transpose(embedded_words, [2, 0, 1, 3])
         embedded_words = tf.reshape(embedded_words, [-1, wordinsent_cnt, embedding_size])
-#         embedded_reg = tf.reshape(self.input_reg, [-1, wordinsent_cnt, embedding_size])
         
-        # Note: 'tf.split' outputs a **Python** list.
-#         embedded_words = tf.split(0, wordinsent_cnt, embedded_words)
 
         # Layer 2: LSTM cell
         lstm_use_peepholes = True
-        # 'state_is_tuple = True' should NOT be used despite the warnings
-        # (which appear as of TF 0.9), since it doesn't work on the version of
-        # TF installed on Euler (0.8).
         with tf.variable_scope('lstm_cell1'):
             print("Using simple 1-layer LSTM with hidden layer size {0}."
                   .format(hidden_size))
@@ -89,25 +60,12 @@ class TextLSTM(object):
             lstm_cells_dropout = rnn_cell.DropoutWrapper(lstm_cells,
                                                         input_keep_prob=self.dropout_keep_prob,
                                                         output_keep_prob=self.dropout_keep_prob)
-        # Q: Can't batches end up containing both positive and negative labels?
-        #    Can the LSTM batch training deal with this?
-        #
-        # A: Yes. Each batch feeds each sentence into the LSTM, incurs the loss,
-        #    and backpropagates the error separately. Each example in a bath
-        #    is independent. Note that as opposed to language models, for
-        #    instance, where we incur a loss for all outputs, in this case we
-        #    only care about the final output of the RNN, since it doesn't make
-        #    sense to classify incomplete tweets.
-
             outputs1, _states1 = dynamic_rnn(lstm_cells_dropout,
                                    inputs=embedded_words,
                                    dtype=tf.float64)
         
-#         outputs_reg = tf.add(outputs1, embedded_reg, 'output_with_reg')
-        
         # pooling
         poollayer = tf.reduce_mean(outputs1, axis=1)
-
         output_restore = tf.reshape(poollayer, [-1, sentindoc_cnt, embedding_size])
 
         with tf.variable_scope('lstm_cell2'):
@@ -155,10 +113,10 @@ class TextLSTM(object):
         self.saver = tf.train.Saver()
 
     def train(self, inputs):
-        # if self.debug:
-        train_size = 20
-        # else:
-        #     train_size = inputs.epoch
+        if self.debug:
+            train_size = 20
+        else:
+            train_size = inputs.epoch
         batchList = np.random.randint(inputs.epoch, size = train_size)
         n = 0
         loss_total = 0
@@ -169,15 +127,10 @@ class TextLSTM(object):
             bar = ProgressBar('train', max=train_size)
 
         for i in batchList:
-            # print(len(inputs.docs[i]))
-            # print(type(inputs.docs[i]))
             nextBatchData = np.array(inputs.docs[i]).astype(np.int32).transpose()
             # Make the labels one-hot
             labels_temp = inputs.label[i]
             nextBatchLabels = np.array(np.eye(self.class_cnt)[labels_temp], dtype=np.float64)
-            # nextBatchLabels = np.array(inputs.label[i], dtype=np.float64)
-            # print(np.shape(nextBatchData))
-            # print(len(nextBatchLabels))
             _, _loss, _accuracy, _prediction = self.sess.run(
                 [self.optim, self.loss, self.accuracy, self.predictlabel],
                 feed_dict={
@@ -211,7 +164,6 @@ class TextLSTM(object):
             # Make the labels one-hot
             labels_temp = inputs.label[i]
             nextBatchLabels = np.array(np.eye(self.class_cnt)[labels_temp], dtype=np.float64)
-            # nextBatchLabels = np.array(inputs.label[i], dtype=np.float64)
             _loss, _accuracy, _prediction = self.sess.run(
                 [self.loss, self.accuracy, self.predictlabel],
                 feed_dict={
@@ -239,8 +191,6 @@ class TextLSTM(object):
             print ('-> iterations: %s' % idx)
             train_loss, train_accuracy = self.train(train_data)
             test_loss, test_accuracy = self.test(test_data)
-            # test_loss = 0.4
-            # test_accuracy = 0.6
             state = {
                 '         epoch': idx,
                 '    train_loss': train_loss,
@@ -264,8 +214,4 @@ class TextLSTM(object):
                 self.saver.save(self.sess,
                                 os.path.join(self.checkpoint_dir, "Network.model"))
                 print('--> model saved: better accuracy!')
-                # if self.doc_emb_method != 'preload_no_update':
-                #     self.save_doc_emb(self.doc_emb)
-                #     self.save_doc_emb_test(self.doc_emb_test)
-                # self.save_pred_test(self.pred_test)
             
