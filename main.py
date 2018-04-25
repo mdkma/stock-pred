@@ -89,7 +89,7 @@ def main(_):
     print('-> voc size: ', len(voc))
 
     # LOAD DATA
-    train_data = Dataset(FLAGS.test_data_path, voc, FLAGS.batch_size, FLAGS.word_emb_dim)
+    train_data = Dataset(FLAGS.train_data_path, voc, FLAGS.batch_size, FLAGS.word_emb_dim)
     test_data = Dataset(FLAGS.test_data_path, voc, FLAGS.batch_size, FLAGS.word_emb_dim, prev_wordinsent_cnt = train_data.wordinsent_cnt)
     wordinsent_cnt = max(train_data.wordinsent_cnt, test_data.wordinsent_cnt)
 
